@@ -18,6 +18,42 @@ export const POINT_B = {
   lng: 121.0244,
 };
 
+/** Nearby-user demo: you are standing close to unverified reports. */
+export const CONFIRM_DEMO_POINT_A = {
+  name: "University of Santo Tomas, Manila",
+  lat: 14.6097,
+  lng: 120.9894,
+};
+
+export const pendingConfirmReports: FloodReport[] = [
+  {
+    id: "flood-confirm-a",
+    latitude: 14.6104,
+    longitude: 120.9901,
+    severity: "SEVERE",
+    description: "España Blvd is flooded. Nearby drivers asked others to confirm.",
+    reportedAt: "3 minutes ago",
+    status: "Impassable",
+    source: "demo",
+    confirmations: 2,
+    verified: false,
+    reporterSession: "neighbor-demo",
+  },
+  {
+    id: "flood-confirm-b",
+    latitude: 14.6089,
+    longitude: 120.9886,
+    severity: "MODERATE",
+    description: "Standing water on the side street. Confirm or dismiss if you are nearby.",
+    reportedAt: "5 minutes ago",
+    status: "Dangerous",
+    source: "demo",
+    confirmations: 1,
+    verified: false,
+    reporterSession: "neighbor-demo",
+  },
+];
+
 export const DEMO_ORIGIN = POINT_A;
 export const DEMO_DESTINATION = POINT_B;
 
@@ -66,12 +102,15 @@ const DEMO: Omit<FloodReport, "confirmations" | "verified" | "reporterSession">[
 
 const DEMO_CONFIRMS = [12, 9, 5, 3];
 
-export const demoFloodReports: FloodReport[] = DEMO.map((f, i) => ({
-  ...f,
-  confirmations: DEMO_CONFIRMS[i],
-  verified: true,
-  reporterSession: "demo",
-}));
+export const demoFloodReports: FloodReport[] = [
+  ...DEMO.map((f, i) => ({
+    ...f,
+    confirmations: DEMO_CONFIRMS[i],
+    verified: true,
+    reporterSession: "demo",
+  })),
+  ...pendingConfirmReports.map((f) => ({ ...f })),
+];
 
 export function loadFloodReports(): FloodReport[] {
   return demoFloodReports.map((f) => ({ ...f }));

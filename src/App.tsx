@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapView } from "./components/MapView";
-import { POINT_A, POINT_B, loadFloodReports } from "./data/floodData";
+import { POINT_A, POINT_B, CONFIRM_DEMO_POINT_A, loadFloodReports, pendingConfirmReports } from "./data/floodData";
 import { formatKm, formatMins, isInPhilippines } from "./lib/geo";
 import {
   CONFIRMS_TO_VERIFY,
@@ -21,7 +21,7 @@ import type {
 
 const SEVERITIES: FloodSeverity[] = ["LOW", "MODERATE", "SEVERE", "IMPASSABLE"];
 const MANILA: LatLng = { lat: 14.5995, lng: 120.9842 };
-const FLOODS_KEY = "floodsafe-floods-v1";
+const FLOODS_KEY = "floodsafe-floods-v2";
 const SESSION_KEY = "floodsafe-session";
 const CONFIRMS_KEY = "floodsafe-my-confirms";
 const CHAT_KEY = "floodsafe-chats-v1";
@@ -51,11 +51,11 @@ function loadChats(): ChatMessage[] {
       mine: false,
     },
     {
-      id: "c3",
-      floodId: "flood-2",
-      author: "Resident",
-      text: "Still raining. Knee-deep on the outer lane.",
-      at: "11 min ago",
+      id: "c4",
+      floodId: "flood-confirm-a",
+      author: "Nearby driver",
+      text: "Can someone confirm España? Water looks deep from here.",
+      at: "2 min ago",
       mine: false,
     },
   ];
@@ -71,19 +71,26 @@ function sessionId(): string {
 }
 
 function loadStoredFloods(): FloodReport[] {
+  const seeded = loadFloodReports();
   try {
     const raw = localStorage.getItem(FLOODS_KEY);
-    if (!raw) return loadFloodReports();
+    if (!raw) return seeded;
     const parsed = JSON.parse(raw) as FloodReport[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return loadFloodReports();
-    return parsed.map((f) => ({
-      ...f,
-      confirmations: f.confirmations ?? 0,
-      verified: Boolean(f.verified),
-      reporterSession: f.reporterSession ?? "demo",
-    }));
+    if (!Array.isArray(parsed)) return seeded;
+    const userFloods = parsed.filter((f) => f.source === "user");
+    const byId = new Map(parsed.map((f) => [f.id, f]));
+    const mergedDemo = seeded.map((seed) => {
+      const stored = byId.get(seed.id);
+      if (!stored) return seed;
+      return {
+        ...seed,
+        confirmations: stored.confirmations ?? seed.confirmations,
+        verified: stored.verified ?? seed.verified,
+      };
+    });
+    return [...mergedDemo, ...userFloods];
   } catch {
-    return loadFloodReports();
+    return seeded;
   }
 }
 
@@ -482,13 +489,15 @@ export default function App() {
 
   const nearbyToConfirm = useMemo(() => {
     if (!start) return [];
-    return floods.filter(
-      (f) =>
-        isInReportArea(start, f) &&
-        f.reporterSession !== me.current &&
-        !myConfirms.includes(f.id) &&
-        !dismissed.includes(f.id),
-    );
+    return floods
+      .filter(
+        (f) =>
+          isInReportArea(start, f) &&
+          f.reporterSession !== me.current &&
+          !myConfirms.includes(f.id) &&
+          !dismissed.includes(f.id),
+      )
+      .sort((a, b) => Number(a.verified) - Number(b.verified));
   }, [floods, start, myConfirms, dismissed]);
 
   const startNav = () => {
@@ -513,6 +522,29 @@ export default function App() {
     setReportOpen(true);
     const seed = start ?? dest ?? MANILA;
     setReportAt(seed);
+  };
+
+  const loadConfirmDemo = () => {
+    skipA.current = true;
+    skipB.current = true;
+    setUseCurrentLocation(false);
+    const pendingIds = pendingConfirmReports.map((f) => f.id);
+    setMyConfirms((ids) => ids.filter((id) => !pendingIds.includes(id)));
+    setDismissed((ids) => ids.filter((id) => !pendingIds.includes(id)));
+    setFloods((list) => {
+      const without = list.filter((f) => !pendingIds.includes(f.id));
+      return [...without, ...pendingConfirmReports.map((f) => ({ ...f }))];
+    });
+    setStart(CONFIRM_DEMO_POINT_A);
+    setDest(null);
+    setQueryA(CONFIRM_DEMO_POINT_A.name);
+    setQueryB("");
+    setHitsA([]);
+    setHitsB([]);
+    setDecision(null);
+    setToast(
+      "Nearby demo: you are within 2 km of unverified reports. Confirm or Dismiss them.",
+    );
   };
 
   const loadDemoTrip = () => {
@@ -667,7 +699,10 @@ export default function App() {
               Find route
             </button>
             <button type="button" className="fs-btn" onClick={loadDemoTrip}>
-              Demo
+              Route demo
+            </button>
+            <button type="button" className="fs-btn" onClick={loadConfirmDemo}>
+              Nearby demo
             </button>
           </div>
         </div>

@@ -157,6 +157,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .fs-dir__foot .fs-btn {
@@ -889,13 +890,13 @@ body {
 
 .fs-confirm-stack {
   position: absolute;
-  left: 12px;
-  top: auto;
-  bottom: 88px;
+  left: 10px;
+  top: 210px;
+  bottom: auto;
   z-index: 560;
   display: grid;
   gap: 8px;
-  max-width: 420px;
+  max-width: 340px;
   width: calc(100% - 24px);
 }
 
