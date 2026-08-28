@@ -69,10 +69,6 @@ No install needed. Use **Route demo** and **Nearby demo** on the search card to 
   - how many are verified
   - whether the shortest path was skipped because of flooding
 
-### Talk to reporters
-
-- From the AI scan, tap **Talk · …** to open a thread for that flood.
-- Read seeded messages and send your own (stored in this browser).
 
 ### Status & persistence
 
